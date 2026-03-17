@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Calendar v2.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -10,95 +11,187 @@
             --panel: #16161e;
             --cyan: #00f2ff;
             --magenta: #ff00ff;
+            --text: #ffffff;
         }
-        body { 
-            background: var(--bg); color: #fff; font-family: sans-serif; 
-            margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center;
-        }
-        .header { 
-            width: 100%; max-width: 400px; border-bottom: 2px solid var(--cyan);
-            margin-bottom: 20px; padding-bottom: 10px; text-align: center;
-            font-weight: bold; letter-spacing: 2px; color: var(--magenta);
-        }
-        .grid { 
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; 
-            width: 100%; max-width: 400px; 
-        }
-        .weekday { color: #555; font-size: 12px; text-align: center; text-transform: uppercase; padding-bottom: 5px; }
-        .day { 
-            background: var(--panel); border: 1px solid #2a2a2e; border-radius: 8px;
-            padding: 18px 0; text-align: center; cursor: pointer; transition: 0.2s; font-size: 18px;
-        }
-        .day.booked { color: var(--cyan); border-color: var(--cyan); box-shadow: inset 0 0 8px rgba(0,242,255,0.2); font-weight: bold; }
-        .day.selected { background: var(--magenta) !important; color: white; box-shadow: 0 0 15px var(--magenta); border-color: white; }
-        .day.other-month { opacity: 0.1; pointer-events: none; }
 
-        /* Маленькая иконка справа снизу */
-        #save-btn { 
-            position: fixed; bottom: 20px; right: 20px;
-            width: 60px; height: 60px; border-radius: 50%;
-            background: var(--bg); border: 2px solid var(--cyan);
-            color: var(--cyan); font-size: 24px; cursor: pointer;
-            box-shadow: 0 0 15px var(--cyan);
-            display: flex; align-items: center; justify-content: center;
-            transition: 0.3s; z-index: 100;
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
         }
-        #save-btn:active { transform: scale(0.9); background: var(--cyan); color: #000; }
+
+        .header {
+            color: var(--magenta);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--cyan);
+            padding-bottom: 8px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .calendar-container {
+            background-color: var(--panel);
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 15px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .weekday {
+            color: #555;
+            font-size: 12px;
+            text-align: center;
+            text-transform: uppercase;
+            font-weight: bold;
+            padding-bottom: 10px;
+        }
+
+        .day {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid #2a2a2e;
+            border-radius: 10px;
+            padding: 18px 0;
+            text-align: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: 0.2s;
+        }
+
+        /* Дни, которые уже есть в SQL базе (пришли из бота) */
+        .day.booked {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            box-shadow: inset 0 0 10px rgba(0, 242, 255, 0.2);
+            font-weight: bold;
+        }
+
+        /* Дни, которые пользователь выбрал сейчас */
+        .day.selected {
+            background-color: var(--magenta) !important;
+            border-color: #fff;
+            color: #fff;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--magenta);
+            z-index: 2;
+        }
+
+        .day:active {
+            transform: scale(0.95);
+        }
+
+        /* Маленькая круглая иконка сохранения справа снизу */
+        #save-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            background-color: var(--bg);
+            border: 2px solid var(--cyan);
+            border-radius: 50%;
+            color: var(--cyan);
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+            transition: 0.3s;
+            z-index: 100;
+        }
+
+        #save-btn:hover {
+            background-color: var(--cyan);
+            color: #000;
+        }
     </style>
 </head>
 <body>
-    <div class="header">МАРТ111111111111 2026</div>
-    <div class="grid" id="grid">
-        <div class="weekday">пн</div><div class="weekday">вт</div><div class="weekday">ср</div>
-        <div class="weekday">чт</div><div class="weekday">пт</div><div class="weekday">сб</div><div class="weekday">вс</div>
+
+    <div class="header">МАРТ 2026</div>
+
+    <div class="calendar-container">
+        <div class="grid" id="calendar-grid">
+            <div class="weekday">пн</div><div class="weekday">вт</div><div class="weekday">ср</div>
+            <div class="weekday">чт</div><div class="weekday">пт</div><div class="weekday">сб</div><div class="weekday">вс</div>
+            </div>
     </div>
-    
+
     <button id="save-btn">✓</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
+        // 1. Получаем список "голубых" дней из ссылки (из SQL базы)
         const urlParams = new URLSearchParams(window.location.search);
-        const booked = (urlParams.get('booked') || "").split(',').filter(x => x);
-        let selected = [];
-        const grid = document.getElementById('grid');
+        const bookedFromDb = (urlParams.get('booked') || "").split(',').filter(x => x);
+        
+        let selectedDays = [];
+        const grid = document.getElementById('calendar-grid');
 
+        // 2. Генерация календаря на Март 2026
         function init() {
-            // Февраль (пустые ячейки для выравнивания)
-            for(let i=23; i<=28; i++) create(i, true); 
-            create(1, true);
-            // Март
-            for(let i=2; i<=31; i++) create(i, false); 
-        }
-
-        function create(num, isOther) {
-            const d = document.createElement('div');
-            d.className = 'day' + (isOther ? ' other-month' : '');
-            d.innerText = num;
-            
-            // Если день уже есть в БД (пришел через URL)
-            if(!isOther && booked.includes(num.toString())) {
-                d.classList.add('booked');
+            // Март 2026 начинается с воскресенья (1 число), 
+            // поэтому добавим 6 пустых ячеек для выравнивания с ПН
+            for(let i=0; i<6; i++) {
+                let empty = document.createElement('div');
+                empty.style.opacity = "0";
+                grid.appendChild(empty);
             }
 
-            d.onclick = () => {
-                if(isOther) return;
-                if(selected.includes(num.toString())) {
-                    selected = selected.filter(x => x !== num.toString());
-                    d.classList.remove('selected');
-                } else {
-                    selected.push(num.toString());
-                    d.classList.add('selected');
+            for(let i=1; i<=31; i++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'day';
+                dayEl.innerText = i;
+                
+                // Если день уже в базе — подсвечиваем
+                if(bookedFromDb.includes(i.toString())) {
+                    dayEl.classList.add('booked');
                 }
-            };
-            grid.appendChild(d);
+
+                dayEl.onclick = () => toggleDay(dayEl, i.toString());
+                grid.appendChild(dayEl);
+            }
         }
 
-        document.getElementById('save-btn').onclick = () => {
-            if(selected.length > 0) {
-                tg.sendData(JSON.stringify({ days: selected }));
+        function toggleDay(el, day) {
+            if(selectedDays.includes(day)) {
+                selectedDays = selectedDays.filter(d => d !== day);
+                el.classList.remove('selected');
             } else {
+                selectedDays.push(day);
+                el.classList.add('selected');
+            }
+        }
+
+        // 3. Отправка данных боту
+        document.getElementById('save-btn').onclick = () => {
+            if(selectedDays.length > 0) {
+                // Отправляем массив выбранных чисел
+                tg.sendData(JSON.stringify({ days: selectedDays }));
+                tg.close();
+            } else {
+                // Если ничего не выбрано, просто закрываем
                 tg.close();
             }
         };
