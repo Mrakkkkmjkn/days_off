@@ -5,50 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0d0d12; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        :root { --bg: #0d0d12; --cyan: #00f2ff; --mag: #ff00ff; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; max-width: 400px; }
-        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 20px 0; text-align: center; cursor: pointer; }
-        .day.booked { border-color: #00f2ff; color: #00f2ff; } /* Дни из базы */
-        .day.selected { background: #ff00ff !important; border-color: #fff; } /* Новые */
-        #save { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: #0d0d12; border: 2px solid #00f2ff; color: #00f2ff; font-size: 28px; cursor: pointer; }
+        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 20px 0; text-align: center; cursor: pointer; font-size: 18px; }
+        .day.selected { background: var(--mag) !important; box-shadow: 0 0 15px var(--mag); border-color: #fff; }
+        #save-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--bg); border: 2px solid var(--cyan); color: var(--cyan); font-size: 28px; cursor: pointer; z-index: 1000; }
     </style>
 </head>
 <body>
+    <h2 style="color:var(--mag)">МАРТ 2026</h2>
     <div class="grid" id="grid"></div>
-    <button id="save">✓</button>
+    <button id="save-btn">✓</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        
-        // Получаем то, что уже в базе
-        const params = new URLSearchParams(window.location.search);
-        const booked = (params.get('booked') || "").split(',').filter(x => x);
+        tg.ready();
 
         let selected = [];
         const grid = document.getElementById('grid');
 
+        // Создаем сетку
         for(let i=1; i<=31; i++) {
             const d = document.createElement('div');
-            d.className = 'day' + (booked.includes(i.toString()) ? ' booked' : '');
+            d.className = 'day';
             d.innerText = i;
             d.onclick = () => {
-                if(selected.includes(i.toString())) {
-                    selected = selected.filter(x => x !== i.toString());
+                const s = i.toString();
+                if(selected.includes(s)) {
+                    selected = selected.filter(x => x !== s);
                     d.classList.remove('selected');
                 } else {
-                    selected.push(i.toString());
+                    selected.push(s);
                     d.classList.add('selected');
                 }
             };
             grid.appendChild(d);
         }
 
-        document.getElementById('save').onclick = () => {
-            if(selected.length > 0) {
-                tg.sendData(JSON.stringify({ days: selected }));
+        document.getElementById('save-btn').onclick = () => {
+            if(selected.length === 0) {
+                alert("Сначала выбери даты!");
+                return;
             }
-            tg.close();
+            
+            // Проверка: выскочит ли окно в Telegram?
+            const dataToSend = JSON.stringify({ days: selected });
+            alert("Отправляю данные боту: " + dataToSend);
+            
+            // Отправка
+            tg.sendData(dataToSend);
         };
     </script>
 </body>
