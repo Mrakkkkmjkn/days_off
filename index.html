@@ -7,28 +7,26 @@
     <style>
         :root { --bg: #0d0d12; --cyan: #00f2ff; --mag: #ff00ff; }
         body { background: var(--bg); color: #fff; font-family: sans-serif; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .header { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; align-items: center;}
-        .lang-btn { background: #16161e; border: 1px solid #333; color: #888; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer;}
-        .nav { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; align-items: center; }
-        .nav button { background: #16161e; border: 1px solid var(--cyan); color: var(--cyan); border-radius: 8px; width: 45px; height: 45px; cursor: pointer; font-size: 20px;}
+        .header { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; align-items: center; }
+        .nav { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 15px; }
+        .nav button { background: #16161e; border: 1px solid var(--cyan); color: var(--cyan); border-radius: 8px; width: 45px; height: 45px; cursor: pointer; }
         .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%; max-width: 400px; }
-        .weekday { color: #555; font-size: 11px; text-align: center; padding-bottom: 5px; text-transform: uppercase;}
-        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 12px 0; text-align: center; cursor: pointer; transition: 0.2s; font-size: 15px;}
+        .weekday { color: #555; font-size: 11px; text-align: center; text-transform: uppercase; padding-bottom: 5px; }
+        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 12px 0; text-align: center; cursor: pointer; }
         .day.selected { border-color: var(--mag); box-shadow: 0 0 10px var(--mag); background: #25162e; }
         .day.past { color: #333; background: #0a0a0e; border-color: #1a1a1a; pointer-events: none; }
-        .empty { pointer-events: none; }
-        #save { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--cyan); border: none; font-size: 24px; box-shadow: 0 0 15px rgba(0,242,255,0.4);}
+        #save { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--cyan); border: none; font-size: 24px; }
     </style>
 </head>
 <body>
     <div class="header">
         <h3 id="label" style="margin:0"></h3>
-        <button class="lang-btn" onclick="toggleLang()" id="lang-toggle">RU / UK</button>
+        <div id="lang-label" style="font-size: 12px; color: var(--cyan);"></div>
     </div>
     <div class="nav">
-        <button onclick="changeMonth(-1)">‹</button>
-        <div id="weekday-row" style="display: grid; grid-template-columns: repeat(7, 1fr); flex-grow:1; margin: 0 10px;"></div>
-        <button onclick="changeMonth(1)">›</button>
+        <button onclick="moveMonth(-1)">←</button>
+        <div id="days-header" style="display: grid; grid-template-columns: repeat(7, 1fr); flex-grow:1; margin: 0 10px;"></div>
+        <button onclick="moveMonth(1)">→</button>
     </div>
     <div class="grid" id="grid"></div>
     <button id="save">✓</button>
@@ -44,61 +42,38 @@
 
         let lang = params.get('lang') === 'uk' ? 'uk' : 'ru';
         const now = new Date();
-        const realDay = now.getDate();
-        const realMonth = now.getMonth() + 1;
-        const realYear = now.getFullYear();
-
-        let curMonth = parseInt(params.get('month')) || realMonth;
-        let curYear = parseInt(params.get('year')) || realYear;
-        
-        // Массив всех выбранных дат (может содержать даты разных месяцев в памяти)
+        let curMonth = parseInt(params.get('month'));
+        let curYear = parseInt(params.get('year'));
         let selected = (params.get('booked') || "").split(',').filter(x => x);
-
-        function toggleLang() {
-            lang = lang === 'ru' ? 'uk' : 'ru';
-            render();
-        }
 
         function render() {
             const grid = document.getElementById('grid');
-            const weekRow = document.getElementById('weekday-row');
-            grid.innerHTML = '';
-            weekRow.innerHTML = '';
+            const header = document.getElementById('days-header');
+            grid.innerHTML = ''; header.innerHTML = '';
 
-            // Рисуем дни недели
             i18n[lang].days.forEach(d => {
                 const el = document.createElement('div');
-                el.className = 'weekday';
-                el.innerText = d;
-                weekRow.appendChild(el);
+                el.className = 'weekday'; el.innerText = d;
+                header.appendChild(el);
             });
 
-            // Название месяца
             const monthStr = new Date(curYear, curMonth - 1).toLocaleString(lang === 'ru' ? 'ru-RU' : 'uk-UA', {month:'long', year:'numeric'});
-            document.getElementById('label').innerText = monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
+            document.getElementById('label').innerText = monthStr.toUpperCase();
 
-            // Сетка
             const firstDay = new Date(curYear, curMonth - 1, 1).getDay();
             const shift = firstDay === 0 ? 6 : firstDay - 1;
-            const daysCount = new Date(curYear, curMonth, 0).getDate();
+            const totalDays = new Date(curYear, curMonth, 0).getDate();
 
-            for(let i=0; i<shift; i++) {
-                const empty = document.createElement('div');
-                empty.className = 'empty';
-                grid.appendChild(empty);
-            }
+            for(let i=0; i<shift; i++) grid.appendChild(document.createElement('div'));
 
-            for(let i=1; i<=daysCount; i++) {
+            for(let i=1; i<=totalDays; i++) {
                 const d = document.createElement('div');
                 const dId = `${i}.${curMonth}.${curYear}`;
-                d.className = 'day';
-                d.innerText = i;
+                d.className = 'day'; d.innerText = i;
 
-                const isPast = (curYear < realYear) || (curYear === realYear && curMonth < realMonth) || (curYear === realYear && curMonth === realMonth && i < realDay);
-
-                if(isPast) {
-                    d.classList.add('past');
-                } else {
+                const isPast = new Date(curYear, curMonth-1, i) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                if(isPast) d.classList.add('past');
+                else {
                     if(selected.includes(dId)) d.classList.add('selected');
                     d.onclick = () => {
                         if(selected.includes(dId)) {
@@ -114,25 +89,29 @@
             }
         }
 
-        function changeMonth(s) {
-            curMonth += s;
-            if(curMonth > 12) { curMonth = 1; curYear++; }
-            if(curMonth < 1) { curMonth = 12; curYear--; }
-            // ВАЖНО: При смене месяца мы НЕ очищаем массив selected полностью, 
-            // чтобы можно было вернуться и увидеть выбор. 
-            // НО фильтрация произойдет при нажатии кнопки "Сохранить".
-            render();
+        function moveMonth(step) {
+            let nextM = curMonth + step;
+            let nextY = curYear;
+            if(nextM > 12) { nextM = 1; nextY++; }
+            if(nextM < 1) { nextM = 12; nextY--; }
+
+            // ПЕРЕД ПЕРЕХОДОМ: отправляем текущий месяц боту для сохранения
+            // и передаем информацию о том, какой месяц открыть следующим
+            tg.sendData(JSON.stringify({ 
+                action: 'shift',
+                days: selected.filter(d => d.split('.')[1] == curMonth), 
+                month: curMonth, 
+                year: curYear,
+                new_m: nextM,
+                new_y: nextY
+            }));
+            tg.close();
         }
 
         document.getElementById('save').onclick = () => {
-            // ФИЛЬТР: оставляем только даты текущего месяца и года
-            const finalDates = selected.filter(date => {
-                const parts = date.split('.'); // [день, месяц, год]
-                return parseInt(parts[1]) === curMonth && parseInt(parts[2]) === curYear;
-            });
-
             tg.sendData(JSON.stringify({ 
-                days: finalDates, 
+                action: 'save',
+                days: selected.filter(d => d.split('.')[1] == curMonth), 
                 month: curMonth, 
                 year: curYear 
             }));
