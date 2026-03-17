@@ -2,141 +2,114 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: #0d0211;
-            --panel-bg: #1a0525;
-            --text-color: #00f2ff;
-            --accent-color: #ff00ff;
-            --booked-color: #00ff41;
-            --hint-color: #441a52;
+            --bg: #0a0a0c;
+            --panel: #141417;
+            --cyan: #00f2ff;
+            --magenta: #ff00ff;
+            --green: #00ff41;
+            --dark-gray: #2a2a2e;
         }
         body { 
-            font-family: 'Courier New', monospace; 
-            background: var(--bg-color); 
-            color: var(--text-color); 
-            margin: 0; padding: 20px; 
+            background: var(--bg); color: var(--cyan); 
+            font-family: 'Courier New', monospace; margin: 0; padding: 15px;
             display: flex; flex-direction: column; align-items: center;
-            text-shadow: 0 0 5px var(--text-color);
+            overflow: hidden;
         }
-        .calendar-header { 
-            display: flex; justify-content: space-between; width: 100%; max-width: 320px; 
-            align-items: center; margin-bottom: 20px;
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
+        body::after {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%; pointer-events: none;
         }
-        .calendar-grid { 
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; 
-            width: 100%; max-width: 320px; text-align: center;
+        .header { 
+            width: 100%; max-width: 320px; border-bottom: 1px solid var(--magenta);
+            margin-bottom: 20px; padding-bottom: 5px; display: flex; justify-content: space-between;
         }
-        .weekday { color: var(--accent-color); font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .grid { 
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; 
+            width: 100%; max-width: 320px; 
+        }
         .day { 
-            padding: 12px 0; border: 1px solid var(--hint-color); 
-            cursor: pointer; transition: 0.3s; position: relative;
-            background: var(--panel-bg);
+            background: var(--panel); border: 1px solid var(--dark-gray);
+            padding: 12px 0; text-align: center; cursor: pointer; transition: 0.2s;
         }
-        .day:hover { box-shadow: 0 0 15px var(--text-color); z-index: 10; }
-        .day.selected { 
-            background: var(--accent-color) !important; 
-            color: white !important; 
-            box-shadow: 0 0 20px var(--accent-color);
-        }
-        .day.booked { 
-            border: 1px solid var(--booked-color);
-            color: var(--booked-color);
-            box-shadow: inset 0 0 5px var(--booked-color);
-        }
-        .day.booked::after {
-            content: 'ID'; position: absolute; bottom: 2px; right: 2px; font-size: 8px;
-        }
-        .day.other-month { opacity: 0.2; cursor: default; }
+        .weekday { color: var(--magenta); font-size: 10px; text-align: center; margin-bottom: 5px; text-transform: uppercase; }
+        .day.booked { color: var(--green); border-color: var(--green); box-shadow: inset 0 0 5px var(--green); }
+        .day.selected { background: var(--magenta) !important; color: white; box-shadow: 0 0 15px var(--magenta); }
+        .day.other-month { opacity: 0.1; pointer-events: none; }
         
         #confirm-btn { 
-            background: transparent; color: var(--text-color); 
-            border: 2px solid var(--text-color); padding: 15px 30px; 
             margin-top: 25px; width: 100%; max-width: 320px;
-            font-weight: bold; text-transform: uppercase; cursor: pointer;
-            box-shadow: 0 0 10px var(--text-color);
-            transition: 0.3s;
+            background: transparent; border: 2px solid var(--cyan);
+            color: var(--cyan); padding: 15px; font-weight: bold;
+            letter-spacing: 2px; box-shadow: 0 0 10px var(--cyan);
+            cursor: pointer;
         }
-        #confirm-btn:active { transform: scale(0.95); box-shadow: 0 0 20px var(--accent-color); border-color: var(--accent-color); color: var(--accent-color); }
+        #confirm-btn:active { background: var(--cyan); color: black; }
     </style>
 </head>
 <body>
 
-<div class="calendar-header">
-    <strong id="month-year">MARCH // 2026</strong>
-    <span style="color: var(--accent-color); font-size: 10px;">SYSTEM_ACTIVE</span>
+<div class="header">
+    <span>MARCH_2026</span>
+    <span style="color:var(--magenta)">STATUS: ONLINE</span>
 </div>
 
-<div class="calendar-grid" id="calendar-grid">
-    <div class="weekday">mon</div><div class="weekday">tue</div><div class="weekday">wed</div>
-    <div class="weekday">thu</div><div class="weekday">fri</div><div class="weekday">sat</div><div class="weekday">sun</div>
+<div class="grid" id="grid">
+    <div class="weekday">mo</div><div class="weekday">tu</div><div class="weekday">we</div>
+    <div class="weekday">th</div><div class="weekday">fr</div><div class="weekday">sa</div><div class="weekday">su</div>
 </div>
 
-<button id="confirm-btn">EXECUTE CHANGES</button>
+<button id="confirm-btn">EXECUTE UPLINK</button>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-    tg.MainButton.hide();
-
-    const grid = document.getElementById('calendar-grid');
-    const confirmBtn = document.getElementById('confirm-btn');
     
-    // Считываем уже занятые даты
     const urlParams = new URLSearchParams(window.location.search);
-    const bookedDaysRaw = urlParams.get('booked') || ""; 
-    let bookedDays = bookedDaysRaw.split(',').filter(d => d !== "");
-    
-    let selectedDays = [];
+    const booked = (urlParams.get('booked') || "").split(',').filter(x => x);
+    let selected = [];
 
-    function renderCalendar() {
-        // Отрисовка марта 2026 (упрощенно для примера)
-        for (let i = 23; i <= 31; i++) createDayElement(i, i > 28 && i < 32 ? false : true); // Хвост февраля
-        for (let i = 1; i <= 31; i++) createDayElement(i, false);
+    const grid = document.getElementById('grid');
+    
+    function init() {
+        // Хвост февраля (как на скрине)
+        for(let i=23; i<=28; i++) create(i, true);
+        create(1, true);
+        // Март
+        for(let i=2; i<=31; i++) create(i, false);
     }
 
-    function createDayElement(num, isOther) {
-        const div = document.createElement('div');
-        div.className = 'day' + (isOther ? ' other-month' : '');
-        div.innerText = num;
+    function create(num, isOther) {
+        const d = document.createElement('div');
+        d.className = 'day' + (isOther ? ' other-month' : '');
+        d.innerText = num;
+        
+        if(!isOther && booked.includes(num.toString())) d.classList.add('booked');
 
-        const dayStr = num.toString();
-
-        if (!isOther && bookedDays.includes(dayStr)) {
-            div.classList.add('booked');
-        }
-
-        div.onclick = () => {
-            if (isOther) return;
-            
-            if (selectedDays.includes(dayStr)) {
-                // Убираем из выбора
-                selectedDays = selectedDays.filter(d => d !== dayStr);
-                div.classList.remove('selected');
+        d.onclick = () => {
+            if(isOther) return;
+            if(selected.includes(num.toString())) {
+                selected = selected.filter(x => x !== num.toString());
+                d.classList.remove('selected');
             } else {
-                // Добавляем в выбор
-                selectedDays.push(dayStr);
-                div.classList.add('selected');
+                selected.push(num.toString());
+                d.classList.add('selected');
             }
         };
-        grid.appendChild(div);
+        grid.appendChild(d);
     }
 
-    confirmBtn.onclick = () => {
-        if (selectedDays.length === 0) {
-            tg.showAlert("No dates selected for uplink.");
-            return;
-        }
-        // Отправляем массив выбранных чисел
-        tg.sendData(JSON.stringify({ days: selectedDays }));
+    document.getElementById('confirm-btn').onclick = () => {
+        if(selected.length === 0) return tg.close();
+        tg.sendData(json_data = JSON.stringify({ days: selected }));
         tg.close();
     };
 
-    renderCalendar();
+    init();
 </script>
 </body>
 </html>
