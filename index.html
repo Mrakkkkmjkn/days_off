@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -17,12 +18,11 @@
         .day { padding: 10px; border-radius: 5px; cursor: pointer; transition: 0.2s; position: relative; }
         .day:hover { background: #f0f0f0; }
         .day.selected { background: #4a4a4a !important; color: white !important; font-weight: bold; border-radius: 4px; }
-        .day.booked { background: #e8f4fd; color: var(--active-color); font-weight: bold; } /* Цвет для уже взятых выходных */
+        .day.booked { background: #e8f4fd; color: var(--active-color); font-weight: bold; }
         .day.other-month { color: var(--hint-color); }
-        
         .footer-btns { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; max-width: 300px; }
         .btn-link { color: var(--active-color); cursor: pointer; font-size: 16px; text-decoration: none; }
-        #confirm-btn { background: var(--active-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; margin-top: 20px; display: none; }
+        #confirm-btn { background: var(--active-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; margin-top: 20px; display: none; font-size: 16px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -38,7 +38,7 @@
 <div class="calendar-grid" id="calendar-grid">
     <div class="weekday">Пн</div><div class="weekday">Вт</div><div class="weekday">Ср</div>
     <div class="weekday">Чт</div><div class="weekday">Пт</div><div class="weekday">Сб</div><div class="weekday">Вс</div>
-    </div>
+</div>
 
 <div class="footer-btns">
     <div class="btn-link" onclick="location.reload()">Очистить</div>
@@ -55,21 +55,20 @@
     const confirmBtn = document.getElementById('confirm-btn');
     let selectedDate = null;
 
-    // ВАЖНО: Список дат, которые уже заняты (пока статично, потом можно получать из бота)
-    const bookedDates = ["2026-03-17", "2026-03-20"]; 
+    // Считываем занятые даты из параметров ссылки (приходят от бота)
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookedDaysRaw = urlParams.get('booked') || ""; 
+    const bookedDays = bookedDaysRaw.split(',').filter(d => d !== "");
 
     function renderCalendar() {
-        const now = new Date(2026, 2, 1); // Март 2026
-        const daysInMonth = 31;
-        const startDay = 0; // Пн
-
-        // Добавляем пустые ячейки (предыдущий месяц)
-        for (let i = 23; i <= 28; i++) {
-            createDayElement(i, true);
-        }
+        const year = 2026;
+        const month = 2; // Март (индекс с 0)
+        
+        // Отрисовка "хвоста" февраля для красоты как на скрине
+        for (let i = 23; i <= 28; i++) createDayElement(i, true);
         createDayElement(1, true);
 
-        // Добавляем текущий месяц
+        // Отрисовка марта
         for (let i = 2; i <= 31; i++) {
             createDayElement(i, false);
         }
@@ -80,10 +79,7 @@
         div.className = 'day' + (isOther ? ' other-month' : '');
         div.innerText = num;
 
-        const dateStr = `2026-03-${num.toString().padStart(2, '0')}`;
-
-        // Если дата уже взята
-        if (!isOther && bookedDates.includes(dateStr)) {
+        if (!isOther && bookedDays.includes(num.toString())) {
             div.classList.add('booked');
         }
 
@@ -91,7 +87,7 @@
             if (isOther) return;
             document.querySelectorAll('.day').forEach(d => d.classList.remove('selected'));
             div.classList.add('selected');
-            selectedDate = dateStr;
+            selectedDate = `2026-03-${num.toString().padStart(2, '0')}`;
             confirmBtn.style.display = 'block';
         };
         grid.appendChild(div);
@@ -104,6 +100,5 @@
 
     renderCalendar();
 </script>
-
 </body>
 </html>
