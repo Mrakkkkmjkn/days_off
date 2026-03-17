@@ -2,40 +2,108 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        h3 { margin-bottom: 20px; }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; margin-bottom: 20px; width: 80%; }
-        button { background-color: #248bcf; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 80%; }
-        button:active { transform: scale(0.98); }
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --hint-color: #999999;
+            --active-color: #248bcf;
+        }
+        body { font-family: sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .calendar-header { display: flex; justify-content: space-between; width: 100%; max-width: 300px; align-items: center; margin-bottom: 20px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; max-width: 300px; text-align: center; }
+        .weekday { color: #d68b1d; font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+        .day { padding: 10px; border-radius: 5px; cursor: pointer; transition: 0.2s; position: relative; }
+        .day:hover { background: #f0f0f0; }
+        .day.selected { background: #4a4a4a !important; color: white !important; font-weight: bold; border-radius: 4px; }
+        .day.booked { background: #e8f4fd; color: var(--active-color); font-weight: bold; } /* Цвет для уже взятых выходных */
+        .day.other-month { color: var(--hint-color); }
+        
+        .footer-btns { margin-top: 30px; display: flex; justify-content: space-between; width: 100%; max-width: 300px; }
+        .btn-link { color: var(--active-color); cursor: pointer; font-size: 16px; text-decoration: none; }
+        #confirm-btn { background: var(--active-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; width: 100%; margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
-    <h3>Выберите дату выходного</h3>
-    <input type="date" id="datePicker">
-    <button id="mainButton">Подтвердить</button>
 
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand(); 
+<div class="calendar-header">
+    <strong id="month-year">Март 2026</strong>
+    <div>
+        <span style="font-size: 20px; margin-right: 15px; cursor: pointer;">↑</span>
+        <span style="font-size: 20px; cursor: pointer;">↓</span>
+    </div>
+</div>
 
-        const btn = document.getElementById('mainButton');
-        const dateInput = document.getElementById('datePicker');
+<div class="calendar-grid" id="calendar-grid">
+    <div class="weekday">Пн</div><div class="weekday">Вт</div><div class="weekday">Ср</div>
+    <div class="weekday">Чт</div><div class="weekday">Пт</div><div class="weekday">Сб</div><div class="weekday">Вс</div>
+    </div>
 
-        // Установим сегодняшнюю дату как минимальную
-        dateInput.min = new Date().toISOString().split("T")[0];
+<div class="footer-btns">
+    <div class="btn-link" onclick="location.reload()">Очистить</div>
+    <div class="btn-link">Сегодня</div>
+</div>
 
-        btn.addEventListener('click', () => {
-            if (!dateInput.value) {
-                alert("Пожалуйста, выберите дату!");
-                return;
-            }
-            const data = { date: dateInput.value };
-            tg.sendData(JSON.stringify(data)); 
-            tg.close();
-        });
-    </script>
+<button id="confirm-btn">Подтвердить выбор</button>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const grid = document.getElementById('calendar-grid');
+    const confirmBtn = document.getElementById('confirm-btn');
+    let selectedDate = null;
+
+    // ВАЖНО: Список дат, которые уже заняты (пока статично, потом можно получать из бота)
+    const bookedDates = ["2026-03-17", "2026-03-20"]; 
+
+    function renderCalendar() {
+        const now = new Date(2026, 2, 1); // Март 2026
+        const daysInMonth = 31;
+        const startDay = 0; // Пн
+
+        // Добавляем пустые ячейки (предыдущий месяц)
+        for (let i = 23; i <= 28; i++) {
+            createDayElement(i, true);
+        }
+        createDayElement(1, true);
+
+        // Добавляем текущий месяц
+        for (let i = 2; i <= 31; i++) {
+            createDayElement(i, false);
+        }
+    }
+
+    function createDayElement(num, isOther) {
+        const div = document.createElement('div');
+        div.className = 'day' + (isOther ? ' other-month' : '');
+        div.innerText = num;
+
+        const dateStr = `2026-03-${num.toString().padStart(2, '0')}`;
+
+        // Если дата уже взята
+        if (!isOther && bookedDates.includes(dateStr)) {
+            div.classList.add('booked');
+        }
+
+        div.onclick = () => {
+            if (isOther) return;
+            document.querySelectorAll('.day').forEach(d => d.classList.remove('selected'));
+            div.classList.add('selected');
+            selectedDate = dateStr;
+            confirmBtn.style.display = 'block';
+        };
+        grid.appendChild(div);
+    }
+
+    confirmBtn.onclick = () => {
+        tg.sendData(JSON.stringify({ date: selectedDate }));
+        tg.close();
+    };
+
+    renderCalendar();
+</script>
+
 </body>
 </html>
