@@ -5,58 +5,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0d0d12; color: #fff; font-family: sans-serif; text-align: center; }
-        .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; max-width: 95vw; margin-top: 20px; }
-        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 15px 0; cursor: pointer; }
-        /* Дни, которые уже в БД (Синие) */
-        .day.booked { border-color: #00f2ff; color: #00f2ff; box-shadow: inset 0 0 10px #00f2ff33; }
-        /* Дни, которые выбираем сейчас (Розовые) */
-        .day.selected { background: #ff00ff !important; border-color: #fff; }
-        #btn { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: #00f2ff; border: none; font-size: 24px; cursor: pointer; }
+        :root { --bg: #0d0d12; --cyan: #00f2ff; --mag: #ff00ff; --gray: #2a2a2e; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        
+        .nav { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 15px; align-items: center; }
+        .nav button { background: none; border: 1px solid var(--cyan); color: var(--cyan); padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; width: 100%; max-width: 400px; }
+        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 15px 0; text-align: center; cursor: pointer; transition: 0.2s; position: relative; }
+        
+        /* Выходной (светится) */
+        .day.selected { border-color: var(--mag); box-shadow: 0 0 10px var(--mag); color: #fff; background: #25162e; }
+        
+        /* Прошедшие дни (серые) */
+        .day.past { color: #555; background: #111; border-color: #222; cursor: not-allowed; pointer-events: none; }
+        
+        #save-btn { position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px; border-radius: 50%; background: var(--cyan); border: none; font-size: 24px; cursor: pointer; box-shadow: 0 0 20px rgba(0,242,255,0.5); }
     </style>
 </head>
 <body>
-    <h3>МАРТ 2026</h3>
+    <div class="nav">
+        <button onclick="changeMonth(-1)">⬅</button>
+        <h3 id="month-label">Март 2026</h3>
+        <button onclick="changeMonth(1)">➡</button>
+    </div>
+    
     <div class="grid" id="grid"></div>
-    <button id="btn">✓</button>
+    <button id="save-btn">✓</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Читаем список "занятых" дней из ссылки бота
         const params = new URLSearchParams(window.location.search);
-        const booked = (params.get('booked') || "").split(',').filter(x => x);
+        let currentMonth = parseInt(params.get('month')) || 3;
+        let currentYear = parseInt(params.get('year')) || 2026;
+        const initialBooked = (params.get('booked') || "").split(',').map(Number);
+        const todayDay = parseInt(params.get('today')) || 0;
+        const realMonth = new Date().getMonth() + 1; // Реальный текущий месяц для проверки "прошлого"
 
-        let selected = [];
-        const grid = document.getElementById('grid');
+        let selectedDays = [...initialBooked].filter(d => d > 0);
 
-        for(let i=1; i<=31; i++) {
-            const d = document.createElement('div');
-            d.className = 'day';
-            const dayStr = i.toString();
+        function render() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            document.getElementById('month-label').innerText = `${new Date(currentYear, currentMonth-1).toLocaleString('ru', {month:'long'})} ${currentYear}`;
+
+            const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
             
-            // Если день есть в списке из БД — красим сразу
-            if(booked.includes(dayStr)) d.classList.add('booked');
-            
-            d.innerText = i;
-            d.onclick = () => {
-                // Если день уже в базе, можем просто игнорировать или разрешить перевыбор
-                if(selected.includes(dayStr)) {
-                    selected = selected.filter(x => x !== dayStr);
-                    d.classList.remove('selected');
+            for(let i=1; i<=daysInMonth; i++) {
+                const d = document.createElement('div');
+                d.className = 'day';
+                d.innerText = i;
+
+                // Логика прошедших дней: если месяц текущий и день меньше сегодняшнего, или месяц в прошлом
+                const isPast = (currentMonth === realMonth && i < todayDay) || (currentMonth < realMonth);
+                
+                if (isPast) {
+                    d.classList.add('past');
                 } else {
-                    selected.push(dayStr);
-                    d.classList.add('selected');
+                    if(selectedDays.includes(i)) d.classList.add('selected');
+                    d.onclick = () => {
+                        if(selectedDays.includes(i)) {
+                            selectedDays = selectedDays.filter(x => x !== i);
+                            d.classList.remove('selected');
+                        } else {
+                            selectedDays.push(i);
+                            d.classList.add('selected');
+                        }
+                    };
                 }
-            };
-            grid.appendChild(d);
+                grid.appendChild(d);
+            }
         }
 
-        document.getElementById('btn').onclick = () => {
-            if(selected.length > 0) tg.sendData(JSON.stringify({ days: selected }));
+        function changeMonth(dir) {
+            // В рамках одного вызова мы просто меняем визуал, но при сохранении данные уйдут за конкретный месяц
+            currentMonth += dir;
+            if(currentMonth > 12) { currentMonth = 1; currentYear++; }
+            if(currentMonth < 1) { currentMonth = 12; currentYear--; }
+            // В идеале тут нужно было бы спросить у бота данные на новый месяц, 
+            // но для простоты мы считаем, что человек настраивает месяц, на который переключился.
+            render();
+        }
+
+        document.getElementById('save-btn').onclick = () => {
+            tg.sendData(JSON.stringify({
+                days: selectedDays,
+                month: currentMonth,
+                year: currentYear
+            }));
             tg.close();
         };
+
+        render();
     </script>
 </body>
 </html>
