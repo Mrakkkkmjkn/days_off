@@ -7,30 +7,28 @@
     <style>
         :root { --bg: #0d0d12; --cyan: #00f2ff; --mag: #ff00ff; }
         body { background: var(--bg); color: #fff; font-family: sans-serif; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .header { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; }
-        .lang-btn { background: #16161e; border: 1px solid #333; color: #888; border-radius: 5px; padding: 5px 10px; font-size: 12px; }
-        .nav { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 15px; align-items: center; }
-        .nav button { background: #16161e; border: 1px solid var(--cyan); color: var(--cyan); border-radius: 8px; width: 40px; height: 40px; cursor: pointer; }
-        
-        /* Сетка календаря */
+        .header { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; align-items: center;}
+        .lang-btn { background: #16161e; border: 1px solid #333; color: #888; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer;}
+        .nav { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 10px; align-items: center; }
+        .nav button { background: #16161e; border: 1px solid var(--cyan); color: var(--cyan); border-radius: 8px; width: 45px; height: 45px; cursor: pointer; font-size: 20px;}
         .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%; max-width: 400px; }
-        .weekday { color: #888; font-size: 12px; text-align: center; padding-bottom: 5px; font-weight: bold; }
-        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 12px 0; text-align: center; cursor: pointer; font-size: 14px; }
-        
-        .day.selected { border-color: var(--mag); box-shadow: 0 0 10px var(--mag); background: #1f1125; }
-        .day.past { color: #444; background: #0a0a0e; border-color: #1a1a1a; pointer-events: none; opacity: 0.5; }
-        #save { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--cyan); border: none; font-size: 24px; }
+        .weekday { color: #555; font-size: 11px; text-align: center; padding-bottom: 5px; text-transform: uppercase;}
+        .day { background: #16161e; border: 1px solid #333; border-radius: 8px; padding: 12px 0; text-align: center; cursor: pointer; transition: 0.2s; font-size: 15px;}
+        .day.selected { border-color: var(--mag); box-shadow: 0 0 10px var(--mag); background: #25162e; }
+        .day.past { color: #333; background: #0a0a0e; border-color: #1a1a1a; pointer-events: none; }
+        .empty { pointer-events: none; }
+        #save { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--cyan); border: none; font-size: 24px; box-shadow: 0 0 15px rgba(0,242,255,0.4);}
     </style>
 </head>
 <body>
     <div class="header">
-        <div id="label" style="font-weight: bold;"></div>
+        <h3 id="label" style="margin:0"></h3>
         <button class="lang-btn" onclick="toggleLang()" id="lang-toggle">RU / UK</button>
     </div>
     <div class="nav">
-        <button onclick="changeMonth(-1)">←</button>
-        <div class="grid" id="weekday-grid" style="flex-grow: 1; margin: 0 10px; display: grid; grid-template-columns: repeat(7, 1fr);"></div>
-        <button onclick="changeMonth(1)">→</button>
+        <button onclick="changeMonth(-1)">‹</button>
+        <div id="weekday-row" style="display: grid; grid-template-columns: repeat(7, 1fr); flex-grow:1; margin: 0 10px;"></div>
+        <button onclick="changeMonth(1)">›</button>
     </div>
     <div class="grid" id="grid"></div>
     <button id="save">✓</button>
@@ -46,8 +44,14 @@
 
         let lang = params.get('lang') === 'uk' ? 'uk' : 'ru';
         const now = new Date();
-        let curMonth = parseInt(params.get('month')) || (now.getMonth() + 1);
-        let curYear = parseInt(params.get('year')) || now.getFullYear();
+        const realDay = now.getDate();
+        const realMonth = now.getMonth() + 1;
+        const realYear = now.getFullYear();
+
+        let curMonth = parseInt(params.get('month')) || realMonth;
+        let curYear = parseInt(params.get('year')) || realYear;
+        
+        // Массив всех выбранных дат (может содержать даты разных месяцев в памяти)
         let selected = (params.get('booked') || "").split(',').filter(x => x);
 
         function toggleLang() {
@@ -57,47 +61,51 @@
 
         function render() {
             const grid = document.getElementById('grid');
-            const weekGrid = document.getElementById('weekday-grid');
+            const weekRow = document.getElementById('weekday-row');
             grid.innerHTML = '';
-            weekGrid.innerHTML = '';
+            weekRow.innerHTML = '';
 
-            // Дни недели
+            // Рисуем дни недели
             i18n[lang].days.forEach(d => {
-                const div = document.createElement('div');
-                div.className = 'weekday';
-                div.innerText = d;
-                weekGrid.appendChild(div);
+                const el = document.createElement('div');
+                el.className = 'weekday';
+                el.innerText = d;
+                weekRow.appendChild(el);
             });
 
             // Название месяца
-            const monthName = new Date(curYear, curMonth-1).toLocaleString(lang === 'ru' ? 'ru-RU' : 'uk-UA', {month:'long', year:'numeric'});
-            document.getElementById('label').innerText = monthName.toUpperCase();
+            const monthStr = new Date(curYear, curMonth - 1).toLocaleString(lang === 'ru' ? 'ru-RU' : 'uk-UA', {month:'long', year:'numeric'});
+            document.getElementById('label').innerText = monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
 
-            // Сетка дней
-            const firstDay = new Date(curYear, curMonth-1, 1).getDay();
-            const offset = firstDay === 0 ? 6 : firstDay - 1; // Коррекция для Пн как первого дня
-            const daysInMonth = new Date(curYear, curMonth, 0).getDate();
+            // Сетка
+            const firstDay = new Date(curYear, curMonth - 1, 1).getDay();
+            const shift = firstDay === 0 ? 6 : firstDay - 1;
+            const daysCount = new Date(curYear, curMonth, 0).getDate();
 
-            for(let i=0; i<offset; i++) grid.appendChild(document.createElement('div'));
+            for(let i=0; i<shift; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'empty';
+                grid.appendChild(empty);
+            }
 
-            for(let i=1; i<=daysInMonth; i++) {
+            for(let i=1; i<=daysCount; i++) {
                 const d = document.createElement('div');
-                const dateId = `${i}.${curMonth}.${curYear}`;
+                const dId = `${i}.${curMonth}.${curYear}`;
                 d.className = 'day';
                 d.innerText = i;
 
-                const isPast = new Date(curYear, curMonth-1, i) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const isPast = (curYear < realYear) || (curYear === realYear && curMonth < realMonth) || (curYear === realYear && curMonth === realMonth && i < realDay);
 
-                if (isPast) {
+                if(isPast) {
                     d.classList.add('past');
                 } else {
-                    if(selected.includes(dateId)) d.classList.add('selected');
+                    if(selected.includes(dId)) d.classList.add('selected');
                     d.onclick = () => {
-                        if(selected.includes(dateId)) {
-                            selected = selected.filter(x => x !== dateId);
+                        if(selected.includes(dId)) {
+                            selected = selected.filter(x => x !== dId);
                             d.classList.remove('selected');
                         } else {
-                            selected.push(dateId);
+                            selected.push(dId);
                             d.classList.add('selected');
                         }
                     };
@@ -106,15 +114,28 @@
             }
         }
 
-        function changeMonth(step) {
-            curMonth += step;
+        function changeMonth(s) {
+            curMonth += s;
             if(curMonth > 12) { curMonth = 1; curYear++; }
             if(curMonth < 1) { curMonth = 12; curYear--; }
+            // ВАЖНО: При смене месяца мы НЕ очищаем массив selected полностью, 
+            // чтобы можно было вернуться и увидеть выбор. 
+            // НО фильтрация произойдет при нажатии кнопки "Сохранить".
             render();
         }
 
         document.getElementById('save').onclick = () => {
-            tg.sendData(JSON.stringify({ days: selected, month: curMonth, year: curYear }));
+            // ФИЛЬТР: оставляем только даты текущего месяца и года
+            const finalDates = selected.filter(date => {
+                const parts = date.split('.'); // [день, месяц, год]
+                return parseInt(parts[1]) === curMonth && parseInt(parts[2]) === curYear;
+            });
+
+            tg.sendData(JSON.stringify({ 
+                days: finalDates, 
+                month: curMonth, 
+                year: curYear 
+            }));
             tg.close();
         };
 
